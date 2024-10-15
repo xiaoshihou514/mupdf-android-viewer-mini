@@ -14,6 +14,9 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.Scroller;
+import android.content.res.Configuration;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 
 public class PageView extends View implements
 	GestureDetector.OnGestureListener,
@@ -41,6 +44,8 @@ public class PageView extends View implements
 	protected Path errorPath;
 	protected Paint linkPaint;
 	protected Paint hitPaint;
+
+    protected boolean isDarkMode;
 
 	public PageView(Context ctx, AttributeSet atts) {
 		super(ctx, atts);
@@ -71,7 +76,14 @@ public class PageView extends View implements
 		errorPath.lineTo(100, 100);
 		errorPath.moveTo(100, -100);
 		errorPath.lineTo(-100, 100);
+
+        isDarkMode = isDarkMode(ctx);
 	}
+
+    private static boolean isDarkMode(Context context) {
+        int nightModeFlags = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return nightModeFlags == Configuration.UI_MODE_NIGHT_YES;
+    }
 
 	public void setActionListener(DocumentActivity l) {
 		actionListener = l;
@@ -289,7 +301,22 @@ public class PageView extends View implements
 		}
 
 		dst.set(x, y, x + bitmapW, y + bitmapH);
-		canvas.drawBitmap(bitmap, null, dst, null);
+		if (!isDarkMode) {
+			canvas.drawBitmap(bitmap, null, dst, null);
+		} else {
+			ColorMatrix colorMatrix = new ColorMatrix();
+			colorMatrix.set(new float[] {
+				-1.0f, 0, 0, 0, 255,
+				 0, -1.0f, 0, 0, 255,
+				 0, 0, -1.0f, 0, 255,
+				 0, 0, 0, 1.0f, 0
+			});
+
+			ColorMatrixColorFilter colorFilter = new ColorMatrixColorFilter(colorMatrix);
+			Paint paint = new Paint();
+			paint.setColorFilter(colorFilter);
+			canvas.drawBitmap(bitmap, null, dst, paint);
+		}
 
 		if (showLinks && linkBounds != null) {
 			for (Rect b : linkBounds) {
